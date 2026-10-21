@@ -1,3 +1,4 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -14,8 +15,8 @@ export default defineConfig({
     },
   },
   server: {
-    // Must match a CORS-allowed origin on UAT (5173 / 8080 are allowlisted)
     port: 5173,
     host: true,
+    allowedHosts: ["riderite-admin.deployment-uat.com"],
   },
 });
