@@ -29,6 +29,14 @@ type RequestOptions = {
   skipRefresh?: boolean;
 };
 
+function forceLoginRedirect() {
+  clearSession();
+  if (typeof window === "undefined") return;
+  const path = window.location.pathname || "";
+  if (path === "/login" || path.startsWith("/login")) return;
+  window.location.replace("/login");
+}
+
 async function tryRefresh(): Promise<boolean> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
@@ -40,7 +48,6 @@ async function tryRefresh(): Promise<boolean> {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data?.accessToken || !data?.refreshToken || !data?.user) {
-      clearSession();
       return false;
     }
     setSession(
@@ -55,7 +62,6 @@ async function tryRefresh(): Promise<boolean> {
     );
     return true;
   } catch {
-    clearSession();
     return false;
   }
 }
@@ -83,12 +89,23 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       const token = getAccessToken();
       if (token) headers.Authorization = `Bearer ${token}`;
       res = await doFetch();
+    } else {
+      forceLoginRedirect();
+      throw new ApiError(401, "Session expired. Please sign in again.");
     }
   }
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new ApiError(res.status, data.error || `Request failed (${res.status})`);
+    const message = data.error || `Request failed (${res.status})`;
+    if (
+      auth &&
+      (res.status === 401 ||
+        /jwt expired|invalid token|token expired|unauthorized/i.test(String(message)))
+    ) {
+      forceLoginRedirect();
+    }
+    throw new ApiError(res.status, message);
   }
   return data as T;
 }

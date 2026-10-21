@@ -1,5 +1,5 @@
 import { adminApi, ApiError } from "@/lib/api";
-import { getAccessToken } from "@/lib/session";
+import { clearSession, getAccessToken } from "@/lib/session";
 import { GenericListPage } from "@/pages/GenericListPage";
 import { RevenuePage } from "@/pages/RevenuePage";
 import { useEffect, useState } from "react";
@@ -262,6 +262,11 @@ export async function downloadCsv(kind: "users" | "drivers") {
   const res = await fetch(url, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
+  if (res.status === 401) {
+    clearSession();
+    window.location.replace("/login");
+    throw new Error("Session expired");
+  }
   if (!res.ok) throw new Error("Export failed");
   const blob = await res.blob();
   const a = document.createElement("a");
