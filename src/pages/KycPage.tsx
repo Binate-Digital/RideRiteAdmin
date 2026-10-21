@@ -1,19 +1,21 @@
 import { useEffect, useState } from "react";
 import { Check, Loader2, X } from "lucide-react";
 import { adminApi, ApiError, type PlatformDriver } from "@/lib/api";
+import { RejectReasonModal } from "@/components/RejectReasonModal";
 
 export function KycPage() {
   const [rows, setRows] = useState<PlatformDriver[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<PlatformDriver | null>(null);
 
   const load = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await adminApi.drivers();
-      setRows(res.drivers.filter((d) => d.status === "pending" || d.verificationStatus === "pending"));
+      const res = await adminApi.drivers({ status: "pending", page: 1, limit: 100 });
+      setRows(res.drivers);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Failed to load KYC");
     } finally {
@@ -25,15 +27,13 @@ export function KycPage() {
     void load();
   }, []);
 
-  const act = async (userId: string, status: "approved" | "rejected") => {
+  const act = async (userId: string, status: "approved" | "rejected", reason: string | null = null) => {
     setBusyId(userId);
+    setError(null);
     try {
-      let reason: string | null = null;
-      if (status === "rejected") {
-        reason = window.prompt("Rejection reason?", "")?.trim() || null;
-      }
       await adminApi.setDriverStatus(userId, status, reason);
       setRows((prev) => prev.filter((r) => r.userId !== userId));
+      setRejectTarget(null);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Update failed");
     } finally {
@@ -63,7 +63,8 @@ export function KycPage() {
                   <div className="font-semibold">{r.fullName || "—"}</div>
                   <div className="text-xs text-muted font-mono">{r.userId}</div>
                   <div className="text-sm mt-1">
-                    {r.email || "no email"} · {[r.vehicleYear, r.vehicleMake, r.vehicleModel].filter(Boolean).join(" ")}
+                    {r.email || "no email"} ·{" "}
+                    {[r.vehicleYear, r.vehicleMake, r.vehicleModel].filter(Boolean).join(" ")}
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -76,7 +77,10 @@ export function KycPage() {
                   </button>
                   <button
                     disabled={busyId === r.userId}
-                    onClick={() => void act(r.userId, "rejected")}
+                    onClick={() => {
+                      setError(null);
+                      setRejectTarget(r);
+                    }}
                     className="inline-flex items-center gap-1 rounded-md border border-danger/40 px-3 py-1.5 text-xs font-bold text-danger disabled:opacity-40"
                   >
                     <X className="h-3 w-3" /> Reject
@@ -88,6 +92,17 @@ export function KycPage() {
           </div>
         )}
       </div>
+
+      <RejectReasonModal
+        open={Boolean(rejectTarget)}
+        driverName={rejectTarget?.fullName || rejectTarget?.email || undefined}
+        busy={busyId === rejectTarget?.userId}
+        onClose={() => setRejectTarget(null)}
+        onConfirm={(reason) => {
+          if (!rejectTarget) return;
+          void act(rejectTarget.userId, "rejected", reason);
+        }}
+      />
     </div>
   );
 }

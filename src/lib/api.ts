@@ -180,17 +180,38 @@ export type PlatformTrip = {
   createdAt: string;
 };
 
+export type Paged<T> = {
+  ok: true;
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+} & T;
+
+function toQuery(params: Record<string, string | number | undefined | null>) {
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") continue;
+    qs.set(key, String(value));
+  }
+  const s = qs.toString();
+  return s ? `?${s}` : "";
+}
+
 export const adminApi = {
   analytics: () => apiRequest<{ ok: true } & Analytics>("/api/admin/analytics", { auth: true }),
-  users: (q?: string) =>
-    apiRequest<{ ok: true; users: PlatformUser[] }>(
-      `/api/admin/users${q ? `?q=${encodeURIComponent(q)}` : ""}`,
+  users: (params: { q?: string; role?: string; page?: number; limit?: number } = {}) =>
+    apiRequest<Paged<{ users: PlatformUser[] }>>(
+      `/api/admin/users${toQuery(params)}`,
       { auth: true },
     ),
   setUserRole: (id: string, role: PlatformUser["role"]) =>
     apiRequest(`/api/admin/users/${id}/role`, { method: "PATCH", auth: true, body: { role } }),
-  drivers: () =>
-    apiRequest<{ ok: true; drivers: PlatformDriver[] }>("/api/admin/drivers", { auth: true }),
+  drivers: (params: { q?: string; status?: string; page?: number; limit?: number } = {}) =>
+    apiRequest<Paged<{ drivers: PlatformDriver[] }>>(
+      `/api/admin/drivers${toQuery(params)}`,
+      { auth: true },
+    ),
   setDriverStatus: (userId: string, status: PlatformDriver["status"], reason?: string | null) =>
     apiRequest(`/api/admin/drivers/${userId}/status`, {
       method: "PATCH",
