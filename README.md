@@ -14,7 +14,9 @@ cp .env.example .env
 npm run dev
 ```
 
-App runs on `http://localhost:5174`.
+App runs on `http://localhost:5173` (CORS-allowlisted against UAT).
+
+Uses the **same MongoDB** as the rider web app via `VITE_API_URL` → RideRite backend login/admin APIs. Sign in with your existing Mongo `role: "admin"` account.
 
 ## Deploy
 
