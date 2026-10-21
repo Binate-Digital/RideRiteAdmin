@@ -7,6 +7,16 @@ import { UsersPage } from "@/pages/UsersPage";
 import { DriversPage } from "@/pages/DriversPage";
 import { KycPage } from "@/pages/KycPage";
 import { TripsPage } from "@/pages/TripsPage";
+import {
+  BonusesPage,
+  CancellationsPage,
+  ChauffeurAdminPage,
+  HealthPage,
+  MaintenanceAdminPage,
+  RentalsPage,
+  RevenuePage,
+  SubscriptionsPage,
+} from "@/pages/ModulesPages";
 import { isAdminSession } from "@/lib/session";
 
 function RequireAdmin({ children }: { children: ReactNode }) {
@@ -31,6 +41,14 @@ export default function App() {
         <Route path="drivers" element={<DriversPage />} />
         <Route path="kyc" element={<KycPage />} />
         <Route path="trips" element={<TripsPage />} />
+        <Route path="revenue" element={<RevenuePage />} />
+        <Route path="subscriptions" element={<SubscriptionsPage />} />
+        <Route path="rentals" element={<RentalsPage />} />
+        <Route path="chauffeur" element={<ChauffeurAdminPage />} />
+        <Route path="bonuses" element={<BonusesPage />} />
+        <Route path="maintenance" element={<MaintenanceAdminPage />} />
+        <Route path="cancellations" element={<CancellationsPage />} />
+        <Route path="health" element={<HealthPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

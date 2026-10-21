@@ -8,6 +8,14 @@ import {
   LogOut,
   Menu,
   X,
+  DollarSign,
+  CreditCard,
+  Key,
+  Crown,
+  Gift,
+  Wrench,
+  Ban,
+  Activity,
 } from "lucide-react";
 import { useState } from "react";
 import { getUser, logoutAdmin } from "@/lib/api";
@@ -18,6 +26,14 @@ const nav = [
   { to: "/drivers", label: "Drivers", icon: Car },
   { to: "/kyc", label: "KYC", icon: ShieldCheck },
   { to: "/trips", label: "Trips", icon: Map },
+  { to: "/revenue", label: "Revenue", icon: DollarSign },
+  { to: "/subscriptions", label: "Subscriptions", icon: CreditCard },
+  { to: "/rentals", label: "Rentals", icon: Key },
+  { to: "/chauffeur", label: "Chauffeur", icon: Crown },
+  { to: "/bonuses", label: "Bonuses", icon: Gift },
+  { to: "/maintenance", label: "Maintenance", icon: Wrench },
+  { to: "/cancellations", label: "Cancellations", icon: Ban },
+  { to: "/health", label: "Health", icon: Activity },
 ];
 
 export function AdminLayout() {
@@ -46,7 +62,7 @@ export function AdminLayout() {
             <X className="h-5 w-5" />
           </button>
         </div>
-        <nav className="p-3 space-y-1">
+        <nav className="p-3 space-y-1 overflow-y-auto max-h-[calc(100vh-4rem)]">
           {nav.map((item) => (
             <NavLink
               key={item.to}

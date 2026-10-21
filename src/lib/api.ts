@@ -223,6 +223,49 @@ export const adminApi = {
       `/api/admin/trips${status && status !== "all" ? `?status=${encodeURIComponent(status)}` : ""}`,
       { auth: true },
     ),
+  revenue: () => apiRequest<Record<string, unknown>>("/api/admin/revenue", { auth: true }),
+  subscriptions: () =>
+    apiRequest<{ ok: true; subscriptions: any[] }>("/api/admin/subscriptions", { auth: true }),
+  rentalListings: (status?: string) =>
+    apiRequest<{ ok: true; listings: any[] }>(
+      `/api/admin/rentals/listings${status ? `?status=${status}` : ""}`,
+      { auth: true },
+    ),
+  updateRentalListing: (id: string, body: Record<string, unknown>) =>
+    apiRequest(`/api/admin/rentals/listings/${id}`, { method: "PATCH", auth: true, body }),
+  rentalBookings: () =>
+    apiRequest<{ ok: true; bookings: any[] }>("/api/admin/rentals/bookings", { auth: true }),
+  chauffeur: () =>
+    apiRequest<{ ok: true; bookings: any[] }>("/api/admin/chauffeur", { auth: true }),
+  bonuses: (status?: string) =>
+    apiRequest<{ ok: true; bonuses: any[] }>(
+      `/api/admin/bonuses${status ? `?status=${status}` : ""}`,
+      { auth: true },
+    ),
+  updateBonus: (id: string, body: Record<string, unknown>) =>
+    apiRequest(`/api/admin/bonuses/${id}`, { method: "PATCH", auth: true, body }),
+  maintenance: () =>
+    apiRequest<{ ok: true; records: any[] }>("/api/admin/maintenance", { auth: true }),
+  updateMaintenance: (id: string, body: Record<string, unknown>) =>
+    apiRequest(`/api/admin/maintenance/${id}`, { method: "PATCH", auth: true, body }),
+  cancellations: () =>
+    apiRequest<{ ok: true; cancellations: any[] }>("/api/admin/cancellations", { auth: true }),
+  health: () => apiRequest<Record<string, unknown>>("/api/admin/health", { auth: true }),
+  audit: () => apiRequest<{ ok: true; logs: any[] }>("/api/admin/audit", { auth: true }),
+  setUserActive: (id: string, isActive: boolean) =>
+    apiRequest(`/api/admin/users/${id}/active`, {
+      method: "PATCH",
+      auth: true,
+      body: { isActive },
+    }),
+  refundTrip: (id: string, refundCents: number) =>
+    apiRequest(`/api/admin/trips/${id}/refund`, {
+      method: "PATCH",
+      auth: true,
+      body: { refundCents },
+    }),
+  exportUsersCsvUrl: () => `${getApiBaseUrl()}/api/admin/export/users.csv`,
+  exportDriversCsvUrl: () => `${getApiBaseUrl()}/api/admin/export/drivers.csv`,
 };
 
 export { getUser };

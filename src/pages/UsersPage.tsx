@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Loader2, Search } from "lucide-react";
+import { Download, Loader2, Search } from "lucide-react";
 import { adminApi, ApiError, type PlatformUser } from "@/lib/api";
 import { Pagination } from "@/components/Pagination";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { downloadCsv } from "@/pages/ModulesPages";
 
 const PAGE_SIZE = 20;
 
@@ -77,9 +78,18 @@ export function UsersPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-display text-4xl tracking-wide">USERS</h1>
-        <p className="text-sm text-muted mt-1">Manage platform accounts and roles</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-display text-4xl tracking-wide">USERS</h1>
+          <p className="text-sm text-muted mt-1">Manage platform accounts and roles</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void downloadCsv("users").catch(() => setError("Export failed"))}
+          className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-bold uppercase text-muted hover:text-foreground"
+        >
+          <Download className="h-3.5 w-3.5" /> Export CSV
+        </button>
       </div>
 
       <div className="rounded-xl border border-border bg-surface">

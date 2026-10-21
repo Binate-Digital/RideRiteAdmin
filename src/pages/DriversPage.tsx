@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Check, Loader2, Search, X } from "lucide-react";
+import { Check, Download, Loader2, Search, X } from "lucide-react";
 import { adminApi, ApiError, type PlatformDriver } from "@/lib/api";
 import { RejectReasonModal } from "@/components/RejectReasonModal";
 import { Pagination } from "@/components/Pagination";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { downloadCsv } from "@/pages/ModulesPages";
 
 const PAGE_SIZE = 20;
 
@@ -71,9 +72,18 @@ export function DriversPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-display text-4xl tracking-wide">DRIVERS</h1>
-        <p className="text-sm text-muted mt-1">Approve, reject, or suspend driver profiles</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-display text-4xl tracking-wide">DRIVERS</h1>
+          <p className="text-sm text-muted mt-1">Approve, reject, or suspend driver profiles</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void downloadCsv("drivers").catch(() => setError("Export failed"))}
+          className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-bold uppercase text-muted hover:text-foreground"
+        >
+          <Download className="h-3.5 w-3.5" /> Export CSV
+        </button>
       </div>
 
       <div className="rounded-xl border border-border bg-surface overflow-hidden">
