@@ -1,61 +1,96 @@
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
-import { adminApi, ApiError } from "@/lib/api";
+import { adminApi, errorMessage } from "@/lib/api";
+import { money } from "@/lib/format";
+import { ErrorBanner, inputCls, PageHeader, Panel, Spinner, Stat } from "@/components/ui";
 
-const money = (c: number) =>
-  `$${((c || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
+/**
+ * TRD 6.6 revenue by stream. Definitions match the dashboard (backend utils/revenue.js):
+ * platform revenue = commissions + service fees − promo discounts + fleet rentals + memberships
+ * + late-cancel amounts kept on rentals / chauffeur bookings.
+ */
 export function RevenuePage() {
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let alive = true;
     adminApi
-      .revenue()
-      .then(setData)
-      .catch((e) => setError(e instanceof ApiError ? e.message : "Failed"))
-      .finally(() => setLoading(false));
-  }, []);
+      .revenue({ from, to })
+      .then((d) => alive && (setData(d), setError(null)))
+      .catch((e) => alive && setError(errorMessage(e)));
+    return () => {
+      alive = false;
+    };
+  }, [from, to]);
 
-  if (loading) return <Loader2 className="h-5 w-5 animate-spin text-primary" />;
-  if (error) return <div className="text-danger text-sm">{error}</div>;
-
-  const cards = [
-    { label: "Trip gross", value: money(data.tripGrossCents) },
-    { label: "Paid online", value: money(data.paidOnlineCents) },
-    { label: "Cancel fees", value: money(data.cancelFeeCents) },
-    { label: "Rental commission", value: money(data.rentalCommissionCents) },
-    { label: "Rental volume", value: money(data.rentalVolumeCents) },
-    { label: "Chauffeur gross", value: money(data.chauffeurGrossCents) },
+  if (!data) return error ? <ErrorBanner error={error} /> : <Spinner />;
+  const streams: [string, number, string][] = [
+    ["Ride commission", data.rideCommissionCents, "share of completed rides' base fare"],
+    ["Ride service fees", data.rideServiceFeeCents, "rider service fee on completed rides"],
+    ["Promo discounts", -data.rideDiscountCents, "platform-funded"],
+    ["Rental commission", data.rentalCommissionCents, `${data.peerRentalCount} paid peer-to-peer rentals`],
+    ["Fleet rental revenue", data.fleetRevenueCents, `${data.fleetRentalCount} paid company-fleet rentals`],
+    ["Chauffeur commission", data.chauffeurCommissionCents, "completed private-driver bookings"],
+    ["Membership revenue", data.subscriptionRevenueCents, "driver subscriptions, net of refunds"],
+    ["Late-cancel retained", data.bookingCancelRetainedCents, "rentals / chauffeur cancelled late"],
   ];
 
   return (
     <div className="space-y-4">
-      <h1 className="text-display text-4xl">REVENUE</h1>
-      <p className="text-sm text-muted">Commissions, subscriptions, and fee totals</p>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {cards.map((c) => (
-          <div key={c.label} className="rounded-xl border border-border bg-surface p-5">
-            <div className="text-[11px] uppercase tracking-wider text-muted font-bold">{c.label}</div>
-            <div className="text-display text-3xl text-primary mt-1">{c.value}</div>
+      <PageHeader
+        title="REVENUE"
+        subtitle="Commissions, fees and memberships — same definitions as the dashboard"
+        actions={
+          <div className="flex items-center gap-2 text-xs text-muted">
+            From <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={inputCls} />
+            To <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={inputCls} />
           </div>
-        ))}
+        }
+      />
+      <ErrorBanner error={error} />
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Stat label="Platform revenue" value={money(data.platformRevenueCents)} sub={from || to ? "selected period" : "all time"} />
+        <Stat label="Collected online" value={money(data.collectedCents)} sub="rides, rentals, chauffeur, memberships" />
+        <Stat label="Refunds issued" value={money(data.refundedCents)} />
+        <Stat label="Payable to drivers" value={money(data.payablePendingCents)} sub={`${data.payablePendingDrivers} drivers · ${money(data.paidOutCents)} paid out in period`} />
       </div>
-      <div className="rounded-xl border border-border bg-surface p-5">
-        <div className="text-sm font-bold mb-2">Active subscriptions</div>
-        {(data.subscriptions || []).length === 0 && (
-          <div className="text-sm text-muted">No active subscriptions</div>
-        )}
-        {(data.subscriptions || []).map((s: any) => (
-          <div key={s._id} className="text-sm flex justify-between border-b border-border py-2">
-            <span>{s._id}</span>
-            <span>
-              {s.count} · {money(s.amount)}
-            </span>
+      <Panel className="p-4">
+        <div className="font-bold mb-3">By stream</div>
+        <div className="divide-y divide-border text-sm">
+          {streams.map(([k, v, hint]) => (
+            <div key={k} className="flex items-center justify-between py-2">
+              <div>
+                <div>{k}</div>
+                <div className="text-xs text-muted">{hint}</div>
+              </div>
+              <div className="font-semibold">{money(v)}</div>
+            </div>
+          ))}
+          <div className="flex items-center justify-between py-2 font-bold">
+            <span>Platform revenue</span>
+            <span className="text-primary">{money(data.platformRevenueCents)}</span>
           </div>
-        ))}
+        </div>
+      </Panel>
+      <div className="grid sm:grid-cols-3 gap-4">
+        <Stat label="Ride fares (gross)" value={money(data.rideFareCents)} sub={`${data.ridesCompleted} completed rides · ${money(data.rideTaxCents)} tax`} />
+        <Stat label="Ride cancellation fees" value={money(data.rideCancelFeeCents)} sub="collected from riders, paid to drivers in full" />
+        <Stat label="Rental volume" value={money(data.rentalVolumeCents)} sub="peer + fleet, paid" />
       </div>
+      {data.subscriptionOverview && (
+        <Panel className="p-4">
+          <div className="font-bold mb-2">Memberships</div>
+          <div className="grid sm:grid-cols-5 gap-3 text-sm">
+            <div>Active <span className="font-bold">{data.subscriptionOverview.active}</span></div>
+            <div>Past due <span className="font-bold">{data.subscriptionOverview.pastDue}</span></div>
+            <div>Canceled <span className="font-bold">{data.subscriptionOverview.canceled}</span></div>
+            <div>Expired <span className="font-bold">{data.subscriptionOverview.expired}</span></div>
+            <div>MRR <span className="font-bold text-primary">{money(data.subscriptionOverview.mrrCents)}</span></div>
+          </div>
+        </Panel>
+      )}
     </div>
   );
 }

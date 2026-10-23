@@ -1,30 +1,66 @@
 import type { ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { AdminLayout } from "@/layouts/AdminLayout";
+import { AdminLayout, NAV } from "@/layouts/AdminLayout";
 import { LoginPage } from "@/pages/LoginPage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { UsersPage } from "@/pages/UsersPage";
+import { UserDetailPage } from "@/pages/UserDetailPage";
 import { DriversPage } from "@/pages/DriversPage";
+import { DriverDetailPage } from "@/pages/DriverDetailPage";
 import { KycPage } from "@/pages/KycPage";
 import { TripsPage } from "@/pages/TripsPage";
-import {
-  BonusesPage,
-  CancellationsPage,
-  ChauffeurAdminPage,
-  HealthPage,
-  MaintenanceAdminPage,
-  RentalsPage,
-  RevenuePage,
-  SubscriptionsPage,
-} from "@/pages/ModulesPages";
-import { isAdminSession } from "@/lib/session";
+import { TripDetailPage } from "@/pages/TripDetailPage";
+import { DisputesPage } from "@/pages/DisputesPage";
+import { RentalsPage } from "@/pages/RentalsPage";
+import { RevenuePage } from "@/pages/RevenuePage";
+import { PayoutsPage, RefundsPage, SubscriptionsPage } from "@/pages/FinancePages";
+import { BonusesPage, CancellationsPage, ChauffeurAdminPage, MaintenanceAdminPage, PromosPage } from "@/pages/ModulesPages";
+import { SettingsPage } from "@/pages/SettingsPage";
+import { AdminsPage, AuditPage, HealthPage } from "@/pages/SystemPages";
+import { can, isAdminSession } from "@/lib/session";
+import { getApiBaseUrl } from "@/lib/api";
 
 function RequireAdmin({ children }: { children: ReactNode }) {
   if (!isAdminSession()) return <Navigate to="/login" replace />;
   return children;
 }
 
+/** Pages the admin's role can't use aren't reachable by URL either (the API refuses them too). */
+function Gate({ perm, children }: { perm: string; children: ReactNode }) {
+  if (can(perm)) return children;
+  const first = NAV.find((n) => can(n.perm));
+  return (
+    <div className="rounded-xl border border-border bg-surface p-6 text-sm text-muted">
+      Your admin role doesn't have access to this page.
+      {first && first.to !== "/" && (
+        <a href={first.to} className="ml-2 font-bold text-primary">
+          Go to {first.label}
+        </a>
+      )}
+    </div>
+  );
+}
+
+/** Build-time config check: the panel never guesses which backend to use. */
+function ConfigError() {
+  return (
+    <div className="min-h-screen grid place-items-center bg-background px-4">
+      <div className="max-w-lg rounded-2xl border border-danger/40 bg-surface p-8">
+        <h1 className="text-display text-3xl text-danger">CONFIGURATION ERROR</h1>
+        <p className="mt-3 text-sm text-muted">
+          <code className="text-foreground">VITE_API_URL</code> is not set, so the admin panel doesn't know which RideRite
+          backend to use. Set it in <code className="text-foreground">.env</code> (see <code>.env.example</code>) and
+          rebuild / restart the dev server.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+const page = (perm: string, el: ReactNode) => <Gate perm={perm}>{el}</Gate>;
+
 export default function App() {
+  if (!getApiBaseUrl()) return <ConfigError />;
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -36,19 +72,29 @@ export default function App() {
           </RequireAdmin>
         }
       >
-        <Route index element={<DashboardPage />} />
-        <Route path="users" element={<UsersPage />} />
-        <Route path="drivers" element={<DriversPage />} />
-        <Route path="kyc" element={<KycPage />} />
-        <Route path="trips" element={<TripsPage />} />
-        <Route path="revenue" element={<RevenuePage />} />
-        <Route path="subscriptions" element={<SubscriptionsPage />} />
-        <Route path="rentals" element={<RentalsPage />} />
-        <Route path="chauffeur" element={<ChauffeurAdminPage />} />
-        <Route path="bonuses" element={<BonusesPage />} />
-        <Route path="maintenance" element={<MaintenanceAdminPage />} />
-        <Route path="cancellations" element={<CancellationsPage />} />
-        <Route path="health" element={<HealthPage />} />
+        <Route index element={page("dashboard:read", <DashboardPage />)} />
+        <Route path="users" element={page("users:read", <UsersPage />)} />
+        <Route path="users/:id" element={page("users:read", <UserDetailPage />)} />
+        <Route path="drivers" element={page("drivers:read", <DriversPage />)} />
+        <Route path="drivers/:userId" element={page("drivers:read", <DriverDetailPage />)} />
+        <Route path="kyc" element={page("drivers:read", <KycPage />)} />
+        <Route path="trips" element={page("trips:read", <TripsPage />)} />
+        <Route path="trips/:id" element={page("trips:read", <TripDetailPage />)} />
+        <Route path="disputes" element={page("disputes:manage", <DisputesPage />)} />
+        <Route path="rentals" element={page("rentals:read", <RentalsPage />)} />
+        <Route path="chauffeur" element={page("chauffeur:read", <ChauffeurAdminPage />)} />
+        <Route path="revenue" element={page("finance:read", <RevenuePage />)} />
+        <Route path="payouts" element={page("finance:read", <PayoutsPage />)} />
+        <Route path="refunds" element={page("finance:read", <RefundsPage />)} />
+        <Route path="subscriptions" element={page("finance:read", <SubscriptionsPage />)} />
+        <Route path="cancellations" element={page("trips:read", <CancellationsPage />)} />
+        <Route path="bonuses" element={page("bonuses:manage", <BonusesPage />)} />
+        <Route path="maintenance" element={page("maintenance:manage", <MaintenanceAdminPage />)} />
+        <Route path="promos" element={page("promos:manage", <PromosPage />)} />
+        <Route path="settings" element={page("settings:read", <SettingsPage />)} />
+        <Route path="audit" element={page("audit:read", <AuditPage />)} />
+        <Route path="health" element={page("health:read", <HealthPage />)} />
+        <Route path="admins" element={page("admins:manage", <AdminsPage />)} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

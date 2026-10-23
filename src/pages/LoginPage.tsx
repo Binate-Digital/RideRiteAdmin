@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2, Shield } from "lucide-react";
 import { isAdminSession } from "@/lib/session";
 import { ApiError, loginAdmin } from "@/lib/api";
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const reason = params.get("reason");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +40,12 @@ export function LoginPage() {
         </div>
         <h1 className="text-display text-4xl tracking-wide">RIDERITE</h1>
         <p className="mt-1 text-sm text-muted">Sign in to the control center</p>
+
+        {reason && (
+          <div className="mt-6 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
+            {reason === "idle" ? "You were signed out after a period of inactivity." : "Your session expired. Please sign in again."}
+          </div>
+        )}
 
         <form onSubmit={onSubmit} className="mt-8 space-y-4">
           <div>
