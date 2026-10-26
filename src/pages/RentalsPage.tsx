@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, MessageSquare, Plus, Send, Trash2 } from "lucide-react";
 import { adminApi, errorMessage, uploadPhotos } from "@/lib/api";
 import { usePagedList } from "@/hooks/usePagedList";
-import { date, label, money, parseDollars } from "@/lib/format";
+import { date, dateTime, label, money, parseDollars } from "@/lib/format";
 import { can } from "@/lib/session";
 import { Badge, btn, ConfirmDialog, DataTable, ErrorBanner, Field, FilterBar, inputCls, Modal, Notice, PageHeader, Panel, Pills, SearchBox } from "@/components/ui";
 
@@ -323,6 +323,10 @@ function FleetForm({ listing, onClose, onSaved }: { listing: any; onClose: () =>
 }
 
 function BookingsTab() {
+  const [notice, setNotice] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<{ row: any; step: "handover" | "return" } | null>(null);
+  const [chatFor, setChatFor] = useState<any | null>(null);
+  const manage = can("rentals:manage");
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
   const [source, setSource] = useState<"all" | "peer" | "fleet">("all");
@@ -348,8 +352,9 @@ function BookingsTab() {
       <div className="px-4 pt-3 text-xs text-muted">
         Paid, matching filters — peer: {money(t.peer?.totalCents)} volume, {money(t.peer?.commissionCents)} commission · fleet: {money(t.fleet?.totalCents)} revenue
       </div>
-      <div className="p-4 pb-0">
+      <div className="p-4 pb-0 space-y-2">
         <ErrorBanner error={list.error} />
+        <Notice message={notice} onClose={() => setNotice(null)} />
       </div>
       <DataTable
         rows={list.rows}
@@ -368,13 +373,125 @@ function BookingsTab() {
             label: "Status",
             render: (b) => (
               <div className="space-y-1">
-                <Badge>{b.status}</Badge>
+                <Badge>{b.displayStatus || b.status}</Badge>
                 <div className="text-xs text-muted">{label(b.paymentStatus)}{b.refundCents ? ` · refunded ${money(b.refundCents)}` : ""}</div>
+                {b.completedBy && <div className="text-xs text-muted">completed by {b.completedBy}</div>}
               </div>
             ),
           },
+          {
+            key: "actions",
+            label: "",
+            render: (b) =>
+              manage ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {b.canHandOver && (
+                    <button className={btn.ghost} onClick={() => setConfirm({ row: b, step: "handover" })}>Picked up</button>
+                  )}
+                  {b.status === "active" && b.canReturn && (
+                    <button className={btn.primary} onClick={() => setConfirm({ row: b, step: "return" })}>Returned</button>
+                  )}
+                  {b.source === "fleet" && b.paid && (
+                    <button className={btn.ghost} onClick={() => setChatFor(b)} title="Chat with the renter as RideRite support">
+                      <MessageSquare className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ) : null,
+          },
         ]}
       />
+      <ConfirmDialog
+        open={!!confirm}
+        title={confirm?.step === "handover" ? "Vehicle picked up" : "Vehicle returned"}
+        message={
+          confirm?.step === "handover"
+            ? `Mark ${confirm?.row.listingTitle || "this rental"} as picked up by ${confirm?.row.renter?.fullName || "the renter"}? The rental becomes active.`
+            : `Mark ${confirm?.row.listingTitle || "this rental"} as returned? The rental completes${confirm?.row.source === "peer" ? " and the owner's share becomes payable with the next payout" : ""}.`
+        }
+        confirmLabel={confirm?.step === "handover" ? "Mark picked up" : "Mark returned"}
+        onClose={() => setConfirm(null)}
+        onConfirm={async () => {
+          if (!confirm) return;
+          if (confirm.step === "handover") await adminApi.rentalHandover(confirm.row.id);
+          else await adminApi.rentalReturn(confirm.row.id);
+          setNotice(confirm.step === "handover" ? "Rental is now active." : "Rental completed.");
+          await list.reload();
+        }}
+      />
+      {chatFor && <FleetChat booking={chatFor} onClose={() => setChatFor(null)} />}
     </Panel>
+  );
+}
+
+/** Fleet rentals: the renter's chat with RideRite support (TRD 4.6). Refreshes every 10 s. */
+function FleetChat({ booking, onClose }: { booking: any; onClose: () => void }) {
+  const [data, setData] = useState<{ chatOpen: boolean; messages: any[] } | null>(null);
+  const [text, setText] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const load = async () => {
+    try {
+      setData(await adminApi.rentalMessages(booking.id));
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  };
+  useEffect(() => {
+    void load();
+    const t = setInterval(() => void load(), 10000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [booking.id]);
+  const sendMsg = async () => {
+    const body = text.trim();
+    if (!body) return;
+    setSending(true);
+    try {
+      await adminApi.sendRentalMessage(booking.id, body);
+      setText("");
+      await load();
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      setSending(false);
+    }
+  };
+  return (
+    <Modal open title="Renter chat" subtitle={`${booking.listingTitle || "Fleet rental"} · ${booking.renter?.fullName || "Renter"}`} onClose={onClose} wide>
+      <ErrorBanner error={error} />
+      <div className="max-h-80 overflow-y-auto space-y-2 rounded-xl border border-border p-3">
+        {!data ? (
+          <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted" />
+        ) : data.messages.length === 0 ? (
+          <p className="text-sm text-muted">No messages yet.</p>
+        ) : (
+          data.messages.map((m) => (
+            <div key={m.id} className={`flex ${m.senderRole === "support" ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[80%] rounded-xl px-3 py-2 text-sm ${m.senderRole === "support" ? "bg-primary/20 border border-primary/40" : "bg-background border border-border"}`}>
+                <div>{m.body}</div>
+                <div className="mt-0.5 text-[10px] text-muted">{m.senderRole === "support" ? "Support" : "Renter"} · {dateTime(m.createdAt)}</div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+      {data?.chatOpen ? (
+        <div className="mt-3 flex gap-2">
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && void sendMsg()}
+            placeholder="Reply as RideRite support…"
+            className={`flex-1 ${inputCls}`}
+          />
+          <button className={btn.primary} disabled={sending || !text.trim()} onClick={() => void sendMsg()}>
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          </button>
+        </div>
+      ) : (
+        data && <p className="mt-3 text-xs text-muted">The rental isn't active, so the chat is read-only.</p>
+      )}
+    </Modal>
   );
 }

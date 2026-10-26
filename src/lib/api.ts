@@ -412,6 +412,15 @@ export const adminApi = {
   updateFleet: (id: string, body: Record<string, unknown>) => send<any>("PATCH", `/api/admin/rentals/fleet/${id}`, body),
   deleteFleet: (id: string) => send<any>("DELETE", `/api/admin/rentals/fleet/${id}`),
   rentalBookings: (p: Params) => get<Paged<{ bookings: any[]; totals: Record<string, any> }>>("/api/admin/rentals/bookings", p),
+  /** Lifecycle: vehicle picked up (confirmed → active) / returned (→ completed, owner share payable) */
+  rentalHandover: (id: string) => send<{ booking: any }>("POST", `/api/admin/rentals/bookings/${id}/handover`),
+  rentalReturn: (id: string) => send<{ booking: any }>("POST", `/api/admin/rentals/bookings/${id}/return`),
+  /** Fleet rentals: renter ↔ RideRite support chat */
+  rentalMessages: (id: string) =>
+    get<{ chatOpen: boolean; messages: { id: string; senderId: string; senderRole: string; body: string; createdAt: string }[] }>(
+      `/api/admin/rentals/bookings/${id}/messages`,
+    ),
+  sendRentalMessage: (id: string, body: string) => send<{ message: any }>("POST", `/api/admin/rentals/bookings/${id}/messages`, { body }),
   chauffeur: (p: Params) => get<Paged<{ bookings: any[] }>>("/api/admin/chauffeur", p),
 
   revenue: (p: Params) => get<any>("/api/admin/revenue", p),
