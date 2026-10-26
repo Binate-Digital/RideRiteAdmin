@@ -1,22 +1,34 @@
-import type { ReactNode } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AdminLayout, NAV } from "@/layouts/AdminLayout";
 import { LoginPage } from "@/pages/LoginPage";
-import { DashboardPage } from "@/pages/DashboardPage";
-import { UsersPage } from "@/pages/UsersPage";
-import { UserDetailPage } from "@/pages/UserDetailPage";
-import { DriversPage } from "@/pages/DriversPage";
-import { DriverDetailPage } from "@/pages/DriverDetailPage";
-import { KycPage } from "@/pages/KycPage";
-import { TripsPage } from "@/pages/TripsPage";
-import { TripDetailPage } from "@/pages/TripDetailPage";
-import { DisputesPage } from "@/pages/DisputesPage";
-import { RentalsPage } from "@/pages/RentalsPage";
-import { RevenuePage } from "@/pages/RevenuePage";
-import { PayoutsPage, RefundsPage, SubscriptionsPage } from "@/pages/FinancePages";
-import { BonusesPage, CancellationsPage, ChauffeurAdminPage, MaintenanceAdminPage, PromosPage } from "@/pages/ModulesPages";
-import { SettingsPage } from "@/pages/SettingsPage";
-import { AdminsPage, AuditPage, HealthPage } from "@/pages/SystemPages";
+
+// Each page is its own chunk, so login / the dashboard don't download every admin screen up front.
+const named = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, name: K) =>
+  lazy(() => load().then((m) => ({ default: m[name] })));
+const DashboardPage = named(() => import("@/pages/DashboardPage"), "DashboardPage");
+const UsersPage = named(() => import("@/pages/UsersPage"), "UsersPage");
+const UserDetailPage = named(() => import("@/pages/UserDetailPage"), "UserDetailPage");
+const DriversPage = named(() => import("@/pages/DriversPage"), "DriversPage");
+const DriverDetailPage = named(() => import("@/pages/DriverDetailPage"), "DriverDetailPage");
+const KycPage = named(() => import("@/pages/KycPage"), "KycPage");
+const TripsPage = named(() => import("@/pages/TripsPage"), "TripsPage");
+const TripDetailPage = named(() => import("@/pages/TripDetailPage"), "TripDetailPage");
+const DisputesPage = named(() => import("@/pages/DisputesPage"), "DisputesPage");
+const RentalsPage = named(() => import("@/pages/RentalsPage"), "RentalsPage");
+const RevenuePage = named(() => import("@/pages/RevenuePage"), "RevenuePage");
+const PayoutsPage = named(() => import("@/pages/FinancePages"), "PayoutsPage");
+const RefundsPage = named(() => import("@/pages/FinancePages"), "RefundsPage");
+const SubscriptionsPage = named(() => import("@/pages/FinancePages"), "SubscriptionsPage");
+const BonusesPage = named(() => import("@/pages/ModulesPages"), "BonusesPage");
+const CancellationsPage = named(() => import("@/pages/ModulesPages"), "CancellationsPage");
+const ChauffeurAdminPage = named(() => import("@/pages/ModulesPages"), "ChauffeurAdminPage");
+const MaintenanceAdminPage = named(() => import("@/pages/ModulesPages"), "MaintenanceAdminPage");
+const PromosPage = named(() => import("@/pages/ModulesPages"), "PromosPage");
+const SettingsPage = named(() => import("@/pages/SettingsPage"), "SettingsPage");
+const AdminsPage = named(() => import("@/pages/SystemPages"), "AdminsPage");
+const AuditPage = named(() => import("@/pages/SystemPages"), "AuditPage");
+const HealthPage = named(() => import("@/pages/SystemPages"), "HealthPage");
 import { can, isAdminSession } from "@/lib/session";
 import { getApiBaseUrl } from "@/lib/api";
 
@@ -57,7 +69,13 @@ function ConfigError() {
   );
 }
 
-const page = (perm: string, el: ReactNode) => <Gate perm={perm}>{el}</Gate>;
+const PageLoading = () => <div className="p-6 text-sm text-muted">Loading…</div>;
+
+const page = (perm: string, el: ReactNode) => (
+  <Gate perm={perm}>
+    <Suspense fallback={<PageLoading />}>{el}</Suspense>
+  </Gate>
+);
 
 export default function App() {
   if (!getApiBaseUrl()) return <ConfigError />;

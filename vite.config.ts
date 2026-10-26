@@ -19,4 +19,10 @@ export default defineConfig({
     host: true,
     allowedHosts: ["riderite-admin.deployment-uat.com"],
   },
+  // Production build served in UAT by `vite preview` (see Dockerfile)
+  preview: {
+    port: 5173,
+    host: true,
+    allowedHosts: ["riderite-admin.deployment-uat.com"],
+  },
 });
