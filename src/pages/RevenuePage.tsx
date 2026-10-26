@@ -35,6 +35,7 @@ export function RevenuePage() {
     ["Chauffeur commission", data.chauffeurCommissionCents, "completed private-driver bookings"],
     ["Membership revenue", data.subscriptionRevenueCents, "driver subscriptions, net of refunds"],
     ["Late-cancel retained", data.bookingCancelRetainedCents, "rentals / chauffeur cancelled late"],
+    ["Ride cancellation fees", data.rideCancelFeePlatformCents ?? 0, "riders who cancelled after the driver was en route"],
   ];
 
   return (
@@ -76,7 +77,11 @@ export function RevenuePage() {
       </Panel>
       <div className="grid sm:grid-cols-3 gap-4">
         <Stat label="Ride fares (gross)" value={money(data.rideFareCents)} sub={`${data.ridesCompleted} completed rides · ${money(data.rideTaxCents)} tax`} />
-        <Stat label="Ride cancellation fees" value={money(data.rideCancelFeeCents)} sub="collected from riders, paid to drivers in full" />
+        <Stat
+          label="Ride cancellation fees"
+          value={money(data.rideCancelFeeCents)}
+          sub={`collected from riders · ${money(data.rideCancelFeePlatformCents ?? 0)} platform revenue${data.rideCancelFeeDriverCents ? ` · ${money(data.rideCancelFeeDriverCents)} credited to drivers before the policy change` : ""}`}
+        />
         <Stat label="Rental volume" value={money(data.rentalVolumeCents)} sub="peer + fleet, paid" />
       </div>
       {data.subscriptionOverview && (

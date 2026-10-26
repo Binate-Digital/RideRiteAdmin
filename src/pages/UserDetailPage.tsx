@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { adminApi, errorMessage } from "@/lib/api";
-import { date, dateTime, label, money } from "@/lib/format";
+import { date, dateTime, label, money, paymentMethodLabel } from "@/lib/format";
 import { can } from "@/lib/session";
 import { Badge, btn, ConfirmDialog, ErrorBanner, KeyValue, Notice, PageHeader, Section, Spinner } from "@/components/ui";
 import { AuditTrail } from "@/components/AuditTrail";
@@ -129,7 +129,7 @@ export function UserDetailPage() {
             ["Route", (t) => `${t.pickupAddress} → ${t.destinationAddress}`],
             ["Status", (t) => <Badge>{t.status}</Badge>],
             ["Fare", (t) => money(t.fare.totalCents)],
-            ["Payment", (t) => `${t.paymentMethod} · ${label(t.paymentStatus)}`],
+            ["Payment", (t) => `${paymentMethodLabel(t.paymentMethod)} · ${label(t.paymentStatus)}`],
           ]}
         />
       </Section>

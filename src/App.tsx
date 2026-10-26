@@ -15,6 +15,7 @@ const KycPage = named(() => import("@/pages/KycPage"), "KycPage");
 const TripsPage = named(() => import("@/pages/TripsPage"), "TripsPage");
 const TripDetailPage = named(() => import("@/pages/TripDetailPage"), "TripDetailPage");
 const DisputesPage = named(() => import("@/pages/DisputesPage"), "DisputesPage");
+const LegalPagesPage = named(() => import("@/pages/LegalPage"), "LegalPagesPage");
 const RentalsPage = named(() => import("@/pages/RentalsPage"), "RentalsPage");
 const RevenuePage = named(() => import("@/pages/RevenuePage"), "RevenuePage");
 const PayoutsPage = named(() => import("@/pages/FinancePages"), "PayoutsPage");
@@ -110,6 +111,7 @@ export default function App() {
         <Route path="maintenance" element={page("maintenance:manage", <MaintenanceAdminPage />)} />
         <Route path="promos" element={page("promos:manage", <PromosPage />)} />
         <Route path="settings" element={page("settings:read", <SettingsPage />)} />
+        <Route path="legal" element={page("legal:write", <LegalPagesPage />)} />
         <Route path="audit" element={page("audit:read", <AuditPage />)} />
         <Route path="health" element={page("health:read", <HealthPage />)} />
         <Route path="admins" element={page("admins:manage", <AdminsPage />)} />

@@ -297,6 +297,17 @@ export type LiveCounters = {
   at: string;
 };
 
+/** Admin-editable legal page (Markdown) */
+export type LegalDoc = {
+  slug: string;
+  title: string;
+  body: string;
+  version: number;
+  placeholder: boolean;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
 export type Revenue = Record<string, number | null> & { platformRevenueCents: number };
 
 export type Analytics = {
@@ -370,6 +381,17 @@ export const adminApi = {
   driver: (userId: string) => get<any>(`/api/admin/drivers/${userId}`),
   setDriverStatus: (userId: string, status: string, reason?: string | null) =>
     send<any>("PATCH", `/api/admin/drivers/${userId}/status`, { status, reason: reason ?? "" }),
+  legalPages: () => get<{ ok: true; corePages: string[]; pages: LegalDoc[] }>("/api/admin/legal"),
+  saveLegalPage: (slug: string, body: { title: string; body: string }) =>
+    send<{ ok: true; changed: boolean; page: LegalDoc }>("PUT", `/api/admin/legal/${slug}`, body),
+  createLegalPage: (body: { slug: string; title: string; body: string }) => send<{ ok: true; page: LegalDoc }>("POST", "/api/admin/legal", body),
+  deleteLegalPage: (slug: string) => send<{ ok: true }>("DELETE", `/api/admin/legal/${slug}`),
+
+  /** Short-lived link to a private driver document (presigned S3 / signed local), per view */
+  driverDocumentUrl: (userId: string, field: string) =>
+    get<{ ok: true; url: string; expiresAt: string | null; mimetype: string; storage: string }>(
+      `/api/admin/drivers/${userId}/documents/${field}/url`,
+    ),
   reviewDocument: (userId: string, doc: string, status: "approved" | "rejected", note = "") =>
     send<any>("PATCH", `/api/admin/drivers/${userId}/documents/${doc}`, { status, note }),
   reviewVehicleChange: (userId: string, action: "approve" | "reject", note = "") =>

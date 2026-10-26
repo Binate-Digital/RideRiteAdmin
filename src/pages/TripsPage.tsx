@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { adminApi, type PlatformTrip } from "@/lib/api";
 import { usePagedList } from "@/hooks/usePagedList";
-import { dateTime, label, money } from "@/lib/format";
+import { dateTime, label, money, paymentMethodLabel } from "@/lib/format";
 import { Badge, DataTable, ErrorBanner, FilterBar, inputCls, PageHeader, Panel, SearchBox } from "@/components/ui";
 
 const PAGE_SIZE = 25;
@@ -92,7 +92,7 @@ export function TripsPage() {
                 <div>
                   <div className="font-bold text-primary">{money(t.fareCents)}</div>
                   <div className="text-xs text-muted">
-                    {t.paymentMethod} · {label(t.paymentStatus)}
+                    {paymentMethodLabel(t.paymentMethod)} · {label(t.paymentStatus)}
                     {t.refundCents ? ` · refunded ${money(t.refundCents)}` : ""}
                   </div>
                 </div>

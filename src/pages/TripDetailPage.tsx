@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { adminApi, errorMessage } from "@/lib/api";
-import { dateTime, label, money, parseDollars } from "@/lib/format";
+import { dateTime, label, money, parseDollars, paymentMethodLabel } from "@/lib/format";
 import { can } from "@/lib/session";
 import { Badge, btn, ConfirmDialog, ErrorBanner, Field, inputCls, KeyValue, Notice, PageHeader, Section, Spinner } from "@/components/ui";
 import { MiniTable } from "@/pages/UserDetailPage";
@@ -110,7 +110,7 @@ export function TripDetailPage() {
         <Section title="Payment">
           <KeyValue
             rows={[
-              ["Method", t.paymentMethod],
+              ["Method", paymentMethodLabel(t.paymentMethod)],
               ["Status", <Badge key="p">{t.paymentStatus}</Badge>],
               ["Paid", t.paid ? dateTime(t.paidAt) : "no"],
               ["Refunded", money(t.refundCents)],

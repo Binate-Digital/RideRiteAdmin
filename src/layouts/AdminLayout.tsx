@@ -23,6 +23,7 @@ import {
   Settings,
   ScrollText,
   UserCog,
+  FileText,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { getUser, logoutAdmin, refreshMe } from "@/lib/api";
@@ -49,6 +50,7 @@ export const NAV = [
   { to: "/maintenance", label: "Maintenance", icon: Wrench, perm: "maintenance:manage" },
   { to: "/promos", label: "Promo codes", icon: Tag, perm: "promos:manage" },
   { to: "/settings", label: "Settings", icon: Settings, perm: "settings:read" },
+  { to: "/legal", label: "Legal pages", icon: FileText, perm: "legal:write" },
   { to: "/audit", label: "Audit log", icon: ScrollText, perm: "audit:read" },
   { to: "/health", label: "Health", icon: Activity, perm: "health:read" },
   { to: "/admins", label: "Admins", icon: UserCog, perm: "admins:manage" },

@@ -25,7 +25,7 @@ export function DisputesPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="DISPUTES" subtitle="Problems riders reported on completed or cancelled trips" />
+      <PageHeader title="DISPUTES" subtitle="Problems riders reported on trips, plus complaints from the website's Florida safety form" />
       <Notice message={notice} onClose={() => setNotice(null)} />
       <Panel>
         <FilterBar>
@@ -42,14 +42,22 @@ export function DisputesPage() {
           paging={{ page: list.page, totalPages: list.totalPages, total: list.total, limit: PAGE_SIZE, onPageChange: list.setPage }}
           columns={[
             { key: "createdAt", label: "Reported", render: (d) => dateTime(d.createdAt) },
-            { key: "rider", label: "Rider", render: (d) => d.rider?.fullName || d.rider?.email || "—" },
+            {
+              key: "rider",
+              label: "Reporter",
+              render: (d) =>
+                d.rider?.fullName || d.rider?.email || (d.contact ? `${d.contact.name} (${d.contact.email})` : "—"),
+            },
             { key: "driver", label: "Driver", render: (d) => d.driver?.fullName || "—" },
             {
               key: "issue",
               label: "Issue",
               render: (d) => (
                 <div className="max-w-[320px]">
-                  <div className="text-xs font-bold uppercase text-muted">{label(d.category)}</div>
+                  <div className="text-xs font-bold uppercase text-muted">
+                    {d.priority === "urgent" && <span className="text-danger">Urgent · </span>}
+                    {d.source === "complaint" ? `Complaint · ${label(d.complaintCategory)}` : label(d.category)}
+                  </div>
                   <div className="truncate" title={d.description}>{d.description}</div>
                 </div>
               ),
@@ -57,11 +65,14 @@ export function DisputesPage() {
             {
               key: "trip",
               label: "Trip",
-              render: (d) => (
-                <Link to={`/trips/${d.tripId}`} className="text-primary text-xs">
-                  {d.trip ? `${money(d.trip.fareCents)} · ${d.trip.status}` : "open"}
-                </Link>
-              ),
+              render: (d) =>
+                d.tripId ? (
+                  <Link to={`/trips/${d.tripId}`} className="text-primary text-xs">
+                    {d.trip ? `${money(d.trip.fareCents)} · ${d.trip.status}` : "open"}
+                  </Link>
+                ) : (
+                  <span className="text-xs text-muted">{d.tripRef ? `given: ${d.tripRef}` : "—"}</span>
+                ),
             },
             { key: "status", label: "Status", render: (d) => <Badge>{d.status}</Badge> },
           ]}
@@ -129,13 +140,24 @@ function DisputeModal({ dispute: d, onClose, onSaved }: { dispute: any; onClose:
       <div className="space-y-3 text-sm">
         <div className="rounded-lg border border-border bg-background p-3">
           <div className="text-xs text-muted mb-1">
-            {d.rider?.fullName || d.rider?.email} on a trip with {d.driver?.fullName || "no driver"}
+            {d.source === "complaint" ? (
+              <>
+                Website complaint ({label(d.complaintCategory)}) from {d.contact?.name} · {d.contact?.email}
+                {d.contact?.phone ? ` · ${d.contact.phone}` : ""}
+                {d.incidentAt ? ` · incident ${dateTime(d.incidentAt)}` : ""}
+                {!d.tripId && d.tripRef ? ` · trip id given: ${d.tripRef} (not found)` : ""}
+              </>
+            ) : (
+              <>
+                {d.rider?.fullName || d.rider?.email} on a trip with {d.driver?.fullName || "no driver"}
+              </>
+            )}
             {d.trip ? ` — ${d.trip.pickupAddress} → ${d.trip.destinationAddress} (${money(d.trip.fareCents)})` : ""}
           </div>
           {d.description}
         </div>
-        <Link to={`/trips/${d.tripId}`} className={btn.link}>Open trip (route, payments, chat transcript) →</Link>
-        <Field label="Resolution notes (sent to the rider)">
+        {d.tripId && <Link to={`/trips/${d.tripId}`} className={btn.link}>Open trip (route, payments, chat transcript) →</Link>}
+        <Field label={d.source === "complaint" && !d.riderId ? "Resolution notes (emailed to the reporter)" : "Resolution notes (sent to the rider)"}>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} disabled={resolved} className={`w-full ${inputCls}`} />
         </Field>
         <Field label="Note to the driver (optional)">

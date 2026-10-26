@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { WEB_APP_URL } from "@/lib/links";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2, Shield } from "lucide-react";
 import { isAdminSession } from "@/lib/session";
@@ -84,6 +85,13 @@ export function LoginPage() {
             Sign in
           </button>
         </form>
+        <p className="mt-4 text-center text-[11px] text-muted">
+          <a className="hover:text-foreground" href={`${WEB_APP_URL}/terms`} target="_blank" rel="noreferrer">Terms</a>
+          {" · "}
+          <a className="hover:text-foreground" href={`${WEB_APP_URL}/privacy`} target="_blank" rel="noreferrer">Privacy</a>
+          {" · "}
+          <a className="hover:text-foreground" href={`${WEB_APP_URL}/eula`} target="_blank" rel="noreferrer">EULA</a>
+        </p>
       </div>
     </div>
   );

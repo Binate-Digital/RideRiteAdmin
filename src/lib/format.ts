@@ -12,3 +12,7 @@ export function parseDollars(input: string): number | null {
   const n = Number(String(input).replace(/[$,\s]/g, ""));
   return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : null;
 }
+
+/** Trip payment method for display: offline methods are paid to the driver at drop-off. */
+export const paymentMethodLabel = (m: string | null | undefined) =>
+  m && ["cash", "venmo", "zelle"].includes(m) ? `${m} (pay on drop-off)` : label(m);

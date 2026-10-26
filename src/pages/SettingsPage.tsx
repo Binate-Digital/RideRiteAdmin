@@ -34,7 +34,7 @@ const GROUPS: { title: string; note?: string; fields: FieldDef[] }[] = [
     title: "Cancellation fee rules",
     note: "Riders pay the fee when they cancel after the driver is en route, unless within the grace window.",
     fields: [
-      { path: "cancellation.feeCents", label: "Cancellation fee", unit: "cents", hint: "capped at the fare; paid to the driver" },
+      { path: "cancellation.feeCents", label: "Cancellation fee", unit: "cents", hint: "capped at the fare; kept by the platform (platform revenue)" },
       { path: "cancellation.graceSeconds", label: "Grace window (seconds after driver sets off)", unit: "int", hint: "0 = fee as soon as the driver is en route" },
     ],
   },

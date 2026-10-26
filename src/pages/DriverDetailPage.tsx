@@ -23,24 +23,60 @@ const FILE_LABELS: Record<string, string> = {
   insuranceDocUrl: "Insurance",
 };
 
-/** Uploaded files are served from public upload URLs (S3 or the API's /uploads). */
-function DocFile({ name, url }: { name: string; url: string | null }) {
-  if (!url) return <div className="rounded-lg border border-dashed border-border p-4 text-xs text-muted">{FILE_LABELS[name] || name}: not uploaded</div>;
-  const isPdf = /\.pdf($|\?)/i.test(url);
+/**
+ * Driver documents are private: the profile holds a storage key, and each view asks the API
+ * for a short-lived signed URL (needs the drivers:documents permission; every view is audited).
+ */
+function DocFile({ userId, name, stored }: { userId: string; name: string; stored: string | null }) {
+  const [view, setView] = useState<{ url: string; mimetype: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const allowed = can("drivers:documents");
+
+  useEffect(() => {
+    if (!stored || !allowed) return;
+    let cancelled = false;
+    adminApi
+      .driverDocumentUrl(userId, name)
+      .then((r) => !cancelled && setView({ url: r.url, mimetype: r.mimetype }))
+      .catch((e) => !cancelled && setError(errorMessage(e)));
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, name, stored, allowed]);
+
+  const caption = FILE_LABELS[name] || name;
+  if (!stored) return <div className="rounded-lg border border-dashed border-border p-4 text-xs text-muted">{caption}: not uploaded</div>;
+  if (!allowed) return <div className="rounded-lg border border-border p-4 text-xs text-muted">{caption}: uploaded (your role can&apos;t open documents)</div>;
+  if (error) return <div className="rounded-lg border border-border p-4 text-xs text-danger">{caption}: {error}</div>;
+
+  // A fresh link per click: the one used for the preview may have expired meanwhile
+  const open = async () => {
+    try {
+      const r = await adminApi.driverDocumentUrl(userId, name);
+      window.open(r.url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  };
+  const isPdf = view?.mimetype === "application/pdf";
   return (
-    <a href={url} target="_blank" rel="noreferrer" className="block rounded-lg border border-border overflow-hidden hover:border-primary">
-      {isPdf ? (
+    <button type="button" onClick={() => void open()} className="block w-full text-left rounded-lg border border-border overflow-hidden hover:border-primary">
+      {!view ? (
+        <div className="h-36 grid place-items-center bg-background">
+          <Spinner />
+        </div>
+      ) : isPdf ? (
         <div className="h-36 grid place-items-center bg-background text-muted">
           <FileText className="h-8 w-8" />
         </div>
       ) : (
-        <img src={url} alt={FILE_LABELS[name] || name} className="h-36 w-full object-cover bg-background" loading="lazy" />
+        <img src={view.url} alt={caption} className="h-36 w-full object-cover bg-background" />
       )}
       <div className="flex items-center justify-between px-2 py-1.5 text-xs">
-        <span>{FILE_LABELS[name] || name}</span>
+        <span>{caption}</span>
         <ExternalLink className="h-3 w-3 text-muted" />
       </div>
-    </a>
+    </button>
   );
 }
 
@@ -171,7 +207,7 @@ export function DriverDetailPage() {
               {doc.note && <div className="mb-2 text-xs text-muted">Note: {doc.note}</div>}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {Object.entries(doc.files).map(([name, url]) => (
-                  <DocFile key={name} name={name} url={url} />
+                  <DocFile key={name} userId={userId} name={name} stored={url} />
                 ))}
               </div>
             </div>
